@@ -45,7 +45,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          opam install -y dune base cmdliner eio eio_main yojson logs fmt unix incremental domainslib alcotest
+          opam install -y dune dune-configurator base cmdliner eio eio_main yojson logs fmt incremental domainslib alcotest
 
       - name: Build
         run: opam exec -- dune build --release

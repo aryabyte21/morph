@@ -58,6 +58,11 @@
     (run ar rcs libts_lang_tsx.a tsx_parser.o tsx_scanner.o)
     (run cc -shared -o dllts_lang_tsx.so tsx_parser.o tsx_scanner.o)))))
 
+(rule
+ (targets ts_cflags.sexp ts_libs.sexp)
+ (action
+  (run %{exe:../../config/discover.exe})))
+
 (library
  (name morph)
  (public_name morph)
@@ -67,6 +72,7 @@
   (language c)
   (names ts_stubs)
   (flags
-   (:standard -I/opt/homebrew/include)))
+   (:standard)
+   (:include ts_cflags.sexp)))
  (c_library_flags
-  (-L/opt/homebrew/lib -ltree-sitter)))
+  (:include ts_libs.sexp)))

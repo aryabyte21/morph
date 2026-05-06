@@ -28,4 +28,10 @@
    (>= 0.7))
   (fmt
    (>= 0.9))
+  (incremental
+   (>= v0.17))
+  (domainslib
+   (>= 0.5))
+  (dune-configurator
+   (>= 3.18))
   (alcotest :with-test)))
