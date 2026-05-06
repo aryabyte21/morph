@@ -5,7 +5,6 @@ class Morph < Formula
   license "MIT"
 
   on_macos do
-    depends_on "tree-sitter"
     if Hardware::CPU.arm?
       url "https://github.com/aryabyte21/morph/releases/download/v#{version}/morph-darwin-arm64.tar.gz"
       sha256 "REPLACE_WITH_SHA256_FROM_RELEASE"
@@ -16,7 +15,6 @@ class Morph < Formula
   end
 
   on_linux do
-    depends_on "tree-sitter"
     if Hardware::CPU.arm?
       url "https://github.com/aryabyte21/morph/releases/download/v#{version}/morph-linux-arm64.tar.gz"
       sha256 "REPLACE_WITH_SHA256_FROM_RELEASE"

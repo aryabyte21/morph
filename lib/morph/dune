@@ -1,4 +1,19 @@
 (rule
+ (targets libts_runtime.a dllts_runtime.so)
+ (deps
+  (source_tree ../runtime))
+ (action
+  (no-infer
+   (progn
+    (run cc -O2 -fPIC -std=c11
+         -I %{workspace_root}/lib/runtime/include
+         -I %{workspace_root}/lib/runtime/src
+         -c %{workspace_root}/lib/runtime/src/lib.c
+         -o ts_runtime.o)
+    (run ar rcs libts_runtime.a ts_runtime.o)
+    (run cc -shared -o dllts_runtime.so ts_runtime.o)))))
+
+(rule
  (targets libts_lang_typescript.a dllts_lang_typescript.so)
  (deps
   (source_tree ../grammars/typescript))
@@ -58,21 +73,13 @@
     (run ar rcs libts_lang_tsx.a tsx_parser.o tsx_scanner.o)
     (run cc -shared -o dllts_lang_tsx.so tsx_parser.o tsx_scanner.o)))))
 
-(rule
- (targets ts_cflags.sexp ts_libs.sexp)
- (action
-  (run %{exe:../../config/discover.exe})))
-
 (library
  (name morph)
  (public_name morph)
  (libraries base eio eio_main yojson logs fmt unix incremental domainslib)
- (foreign_archives ts_lang_typescript ts_lang_python ts_lang_tsx)
+ (foreign_archives ts_runtime ts_lang_typescript ts_lang_python ts_lang_tsx)
  (foreign_stubs
   (language c)
   (names ts_stubs)
   (flags
-   (:standard)
-   (:include ts_cflags.sexp)))
- (c_library_flags
-  (:include ts_libs.sexp)))
+   (:standard -I %{workspace_root}/lib/runtime/include))))

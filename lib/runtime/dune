@@ -1,0 +1,4 @@
+; vendored tree-sitter runtime (v0.25.6, MIT, see LICENSE.tree-sitter)
+; built into a static archive that morph links against, replacing the
+; system libtree-sitter dependency.
+(data_only_dirs src include)
