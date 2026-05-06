@@ -11,6 +11,8 @@
 extern const TSLanguage *tree_sitter_typescript(void);
 extern const TSLanguage *tree_sitter_python(void);
 extern const TSLanguage *tree_sitter_tsx(void);
+extern const TSLanguage *tree_sitter_go(void);
+extern const TSLanguage *tree_sitter_rust(void);
 
 #define Parser_val(v) (*(TSParser **)Data_custom_val(v))
 #define Tree_val(v)   (*(TSTree **)Data_custom_val(v))
@@ -92,6 +94,18 @@ CAMLprim value morph_ts_parser_new_tsx(value unit) {
   CAMLparam1(unit);
   CAMLreturn(alloc_parser_for(tree_sitter_tsx(),
                               "morph: failed to set TSX language"));
+}
+
+CAMLprim value morph_ts_parser_new_go(value unit) {
+  CAMLparam1(unit);
+  CAMLreturn(alloc_parser_for(tree_sitter_go(),
+                              "morph: failed to set Go language"));
+}
+
+CAMLprim value morph_ts_parser_new_rust(value unit) {
+  CAMLparam1(unit);
+  CAMLreturn(alloc_parser_for(tree_sitter_rust(),
+                              "morph: failed to set Rust language"));
 }
 
 CAMLprim value morph_ts_parse_string(value parser, value src) {

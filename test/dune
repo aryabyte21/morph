@@ -3,4 +3,6 @@
  (libraries morph alcotest)
  (deps
   (glob_files fixtures/*.ts)
-  (glob_files fixtures/*.py)))
+  (glob_files fixtures/*.py)
+  (glob_files fixtures/*.go)
+  (glob_files fixtures/*.rs)))

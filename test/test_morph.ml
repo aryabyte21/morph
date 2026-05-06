@@ -1,5 +1,7 @@
 let ts = Morph.Lang.Typescript
 let py = Morph.Lang.Python
+let go = Morph.Lang.Go
+let rust = Morph.Lang.Rust
 
 let test_pattern_parse_no_where () =
   let p =
@@ -36,15 +38,19 @@ let test_py_parse_smoke () =
     (Morph.Ts.node_type root)
 
 let test_lang_of_path () =
+  let to_str p =
+    Option.map Morph.Lang.to_string (Morph.Lang.of_path p)
+  in
   Alcotest.(check (option string)) "ts" (Some "typescript")
-    (Option.map Morph.Lang.to_string
-       (Morph.Lang.of_path "src/foo.ts"));
+    (to_str "src/foo.ts");
   Alcotest.(check (option string)) "py" (Some "python")
-    (Option.map Morph.Lang.to_string
-       (Morph.Lang.of_path "src/foo.py"));
+    (to_str "src/foo.py");
+  Alcotest.(check (option string)) "go" (Some "go")
+    (to_str "src/foo.go");
+  Alcotest.(check (option string)) "rust" (Some "rust")
+    (to_str "src/foo.rs");
   Alcotest.(check (option string)) "unknown" None
-    (Option.map Morph.Lang.to_string
-       (Morph.Lang.of_path "src/foo.rs"))
+    (to_str "src/foo.zig")
 
 let test_match_engine_metavar_single_arg () =
   let fixture = "fixtures/sample.ts" in
@@ -87,6 +93,28 @@ let test_match_engine_python () =
     Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ]
   in
   Alcotest.(check int) "two single-arg print calls" 2
+    (List.length matches)
+
+let test_match_engine_go () =
+  let fixture = "fixtures/sample.go" in
+  let pat =
+    Morph.Pattern.parse ~lang:go ~source:"fmt.Println($X)" ~where:None
+  in
+  let matches =
+    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ]
+  in
+  Alcotest.(check int) "two single-arg fmt.Println calls" 2
+    (List.length matches)
+
+let test_match_engine_rust () =
+  let fixture = "fixtures/sample.rs" in
+  let pat =
+    Morph.Pattern.parse ~lang:rust ~source:"println!($X)" ~where:None
+  in
+  let matches =
+    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ]
+  in
+  Alcotest.(check int) "one single-token-tree println!" 1
     (List.length matches)
 
 let test_rewriter_substitute () =
@@ -342,6 +370,10 @@ let () =
             test_match_engine_no_match
         ; Alcotest.test_case "python print()" `Quick
             test_match_engine_python
+        ; Alcotest.test_case "go fmt.Println()" `Quick
+            test_match_engine_go
+        ; Alcotest.test_case "rust println!()" `Quick
+            test_match_engine_rust
         ] )
     ; ( "matcher"
       , [ Alcotest.test_case "metavar consistency" `Quick

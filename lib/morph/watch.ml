@@ -90,7 +90,10 @@ let watch ~pattern ~paths ~poll_seconds =
   let p_src_str = pattern.Pattern.canonical in
   let p_src = Ts.Source_string p_src_str in
   let p_tree = Ts.parse_string parser p_src_str in
-  let p_anchor = Matcher.pattern_anchor (Ts.root_node p_tree) in
+  let p_anchor =
+    Matcher.pattern_anchor ~lang:pattern.Pattern.lang
+      (Ts.root_node p_tree)
+  in
   let files = Match_engine.collect_files ~lang:pattern.Pattern.lang paths in
   let entries = Hashtbl.create 16 in
   List.iter

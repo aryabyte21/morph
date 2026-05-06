@@ -1,7 +1,7 @@
 class Morph < Formula
   desc "Type-aware codemod CLI for AI agents and humans"
   homepage "https://github.com/aryabyte21/morph"
-  version "0.0.5"
+  version "0.1.0"
   license "MIT"
 
   on_macos do

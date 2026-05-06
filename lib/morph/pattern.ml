@@ -46,7 +46,7 @@ let preprocess source =
   Buffer.contents buf
 
 let parse ~lang ~source ~where =
-  let canonical = preprocess source in
+  let canonical = Lang.pattern_wrap lang (preprocess source) in
   let constraints =
     match where with
     | None -> []

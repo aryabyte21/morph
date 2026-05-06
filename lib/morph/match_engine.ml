@@ -150,7 +150,9 @@ let parallelism =
 let make_pattern_state lang p_src =
   let parser = Lang.parser_new lang in
   let p_tree = Ts.parse_string parser p_src in
-  let p_anchor = Matcher.pattern_anchor (Ts.root_node p_tree) in
+  let p_anchor =
+    Matcher.pattern_anchor ~lang (Ts.root_node p_tree)
+  in
   parser, p_tree, p_anchor
 
 let scan ~pattern ~paths : match_ list =

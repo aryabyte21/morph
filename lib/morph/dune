@@ -74,11 +74,52 @@
     (run ar rcs libts_lang_tsx.a tsx_parser.o tsx_scanner.o)
     (run cc -shared -o dllts_lang_tsx.so tsx_parser.o tsx_scanner.o)))))
 
+(rule
+ (targets libts_lang_go.a dllts_lang_go.so)
+ (deps
+  (source_tree ../grammars/go))
+ (action
+  (no-infer
+   (progn
+    (run cc -O2 -fPIC
+         -I %{workspace_root}/lib/grammars/go
+         -I %{workspace_root}/lib/grammars/go/tree_sitter
+         -c %{workspace_root}/lib/grammars/go/parser.c
+         -o go_parser.o)
+    (run ar rcs libts_lang_go.a go_parser.o)
+    (run cc -shared -o dllts_lang_go.so go_parser.o)))))
+
+(rule
+ (targets libts_lang_rust.a dllts_lang_rust.so)
+ (deps
+  (source_tree ../grammars/rust))
+ (action
+  (no-infer
+   (progn
+    (run cc -O2 -fPIC
+         -I %{workspace_root}/lib/grammars/rust
+         -I %{workspace_root}/lib/grammars/rust/tree_sitter
+         -c %{workspace_root}/lib/grammars/rust/parser.c
+         -o rust_parser.o)
+    (run cc -O2 -fPIC
+         -I %{workspace_root}/lib/grammars/rust
+         -I %{workspace_root}/lib/grammars/rust/tree_sitter
+         -c %{workspace_root}/lib/grammars/rust/scanner.c
+         -o rust_scanner.o)
+    (run ar rcs libts_lang_rust.a rust_parser.o rust_scanner.o)
+    (run cc -shared -o dllts_lang_rust.so rust_parser.o rust_scanner.o)))))
+
 (library
  (name morph)
  (public_name morph)
  (libraries base eio eio_main yojson logs fmt unix incremental domainslib)
- (foreign_archives ts_runtime ts_lang_typescript ts_lang_python ts_lang_tsx)
+ (foreign_archives
+  ts_runtime
+  ts_lang_typescript
+  ts_lang_python
+  ts_lang_tsx
+  ts_lang_go
+  ts_lang_rust)
  (foreign_stubs
   (language c)
   (names ts_stubs)

@@ -78,12 +78,21 @@ let rec match_node ~p_src ~h_src ~p_node ~h_node ~acc =
         in
         loop 0 acc
 
-let pattern_anchor root =
+(* Descend through the language-specific wrap, always taking the named child
+   that ends up containing the user's pattern. We assume the wrap places the
+   user's pattern as the LAST named child of each level (e.g. `package _` then
+   `func _ () { <PAT> }` puts the func decl last in source_file, and the user's
+   expression is the last child of the function body). *)
+let pattern_anchor ?(lang = Lang.Typescript) root =
+  let descenders = Lang.pattern_unwrap_descenders lang in
   let rec descend n =
-    match Ts.node_type n with
-    | "program" | "module" | "expression_statement"
-      when Ts.node_named_child_count n >= 1 ->
-      descend (Ts.node_named_child n 0)
-    | _ -> n
+    let nt = Ts.node_type n in
+    if List.mem nt descenders
+    then
+      let nc = Ts.node_named_child_count n in
+      if nc >= 1
+      then descend (Ts.node_named_child n (nc - 1))
+      else n
+    else n
   in
   descend root

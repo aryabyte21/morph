@@ -19,6 +19,12 @@ external parser_new_python : unit -> parser_
 external parser_new_tsx : unit -> parser_
   = "morph_ts_parser_new_tsx"
 
+external parser_new_go : unit -> parser_
+  = "morph_ts_parser_new_go"
+
+external parser_new_rust : unit -> parser_
+  = "morph_ts_parser_new_rust"
+
 external parse_string : parser_ -> string -> tree = "morph_ts_parse_string"
 
 external parse_bigstring : parser_ -> bigstring -> tree

@@ -70,12 +70,15 @@ let resolve_lang lang_arg paths =
 
 let lsp_command_for = function
   | Lang.Typescript -> "typescript-language-server", [| "--stdio" |]
-  | Lang.Python ->
-    "pylsp", [||]
+  | Lang.Python -> "pylsp", [||]
+  | Lang.Go -> "gopls", [||]
+  | Lang.Rust -> "rust-analyzer", [||]
 
 let lang_id_for = function
   | Lang.Typescript -> "typescript"
   | Lang.Python -> "python"
+  | Lang.Go -> "go"
+  | Lang.Rust -> "rust"
 
 let with_lsp ~lang ~f =
   let cmd, args = lsp_command_for lang in
