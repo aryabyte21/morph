@@ -1,0 +1,72 @@
+(rule
+ (targets libts_lang_typescript.a dllts_lang_typescript.so)
+ (deps
+  (source_tree ../grammars/typescript))
+ (action
+  (no-infer
+   (progn
+    (run cc -O2 -fPIC
+         -I %{workspace_root}/lib/grammars/typescript
+         -I %{workspace_root}/lib/grammars/typescript/tree_sitter
+         -c %{workspace_root}/lib/grammars/typescript/parser.c
+         -o ts_parser.o)
+    (run cc -O2 -fPIC
+         -I %{workspace_root}/lib/grammars/typescript
+         -I %{workspace_root}/lib/grammars/typescript/tree_sitter
+         -c %{workspace_root}/lib/grammars/typescript/scanner.c
+         -o ts_scanner.o)
+    (run ar rcs libts_lang_typescript.a ts_parser.o ts_scanner.o)
+    (run cc -shared -o dllts_lang_typescript.so ts_parser.o ts_scanner.o)))))
+
+(rule
+ (targets libts_lang_python.a dllts_lang_python.so)
+ (deps
+  (source_tree ../grammars/python))
+ (action
+  (no-infer
+   (progn
+    (run cc -O2 -fPIC
+         -I %{workspace_root}/lib/grammars/python
+         -I %{workspace_root}/lib/grammars/python/tree_sitter
+         -c %{workspace_root}/lib/grammars/python/parser.c
+         -o py_parser.o)
+    (run cc -O2 -fPIC
+         -I %{workspace_root}/lib/grammars/python
+         -I %{workspace_root}/lib/grammars/python/tree_sitter
+         -c %{workspace_root}/lib/grammars/python/scanner.c
+         -o py_scanner.o)
+    (run ar rcs libts_lang_python.a py_parser.o py_scanner.o)
+    (run cc -shared -o dllts_lang_python.so py_parser.o py_scanner.o)))))
+
+(rule
+ (targets libts_lang_tsx.a dllts_lang_tsx.so)
+ (deps
+  (source_tree ../grammars/tsx))
+ (action
+  (no-infer
+   (progn
+    (run cc -O2 -fPIC
+         -I %{workspace_root}/lib/grammars/tsx
+         -I %{workspace_root}/lib/grammars/tsx/tree_sitter
+         -c %{workspace_root}/lib/grammars/tsx/parser.c
+         -o tsx_parser.o)
+    (run cc -O2 -fPIC
+         -I %{workspace_root}/lib/grammars/tsx
+         -I %{workspace_root}/lib/grammars/tsx/tree_sitter
+         -c %{workspace_root}/lib/grammars/tsx/scanner.c
+         -o tsx_scanner.o)
+    (run ar rcs libts_lang_tsx.a tsx_parser.o tsx_scanner.o)
+    (run cc -shared -o dllts_lang_tsx.so tsx_parser.o tsx_scanner.o)))))
+
+(library
+ (name morph)
+ (public_name morph)
+ (libraries base eio eio_main yojson logs fmt unix incremental domainslib)
+ (foreign_archives ts_lang_typescript ts_lang_python ts_lang_tsx)
+ (foreign_stubs
+  (language c)
+  (names ts_stubs)
+  (flags
+   (:standard -I/opt/homebrew/include)))
+ (c_library_flags
+  (-L/opt/homebrew/lib -ltree-sitter)))

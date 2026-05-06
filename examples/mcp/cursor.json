@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "morph": {
+      "command": "morph",
+      "args": ["mcp"],
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,6 @@
+(test
+ (name test_morph)
+ (libraries morph alcotest)
+ (deps
+  (glob_files fixtures/*.ts)
+  (glob_files fixtures/*.py)))

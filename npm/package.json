@@ -1,0 +1,23 @@
+{
+  "name": "@morph/cli",
+  "version": "0.0.5",
+  "description": "Type-aware codemod CLI for AI agents and humans",
+  "bin": {
+    "morph": "bin/morph"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aryabyte21/morph.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "install.js",
+    "bin/morph"
+  ]
+}

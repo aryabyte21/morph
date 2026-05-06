@@ -1,0 +1,5 @@
+(executable
+ (name main)
+ (public_name morph)
+ (package morph)
+ (libraries morph cmdliner))
