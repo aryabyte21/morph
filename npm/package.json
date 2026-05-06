@@ -1,6 +1,6 @@
 {
-  "name": "@morph/cli",
-  "version": "0.1.0",
+  "name": "morph-cli",
+  "version": "0.1.1",
   "description": "Type-aware codemod CLI for AI agents and humans",
   "bin": {
     "morph": "bin/morph"

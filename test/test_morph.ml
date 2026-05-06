@@ -347,6 +347,61 @@ let test_type_filter_apply_rejects () =
   in
   Alcotest.(check int) "match rejected" 0 (List.length result)
 
+let test_extract_type_python_pylsp () =
+  let resp =
+    `Assoc
+      [ "id", `Int 1
+      ; ( "result"
+        , `Assoc
+            [ ( "contents"
+              , `Assoc
+                  [ "kind", `String "markdown"
+                  ; ( "value"
+                    , `String
+                        "```\nstr(object='') -> str\nstr(bytes_or_buffer)\n```"
+                    )
+                  ] )
+            ] )
+      ]
+  in
+  Alcotest.(check (option string))
+    "pylsp class signature -> str"
+    (Some "str")
+    (Morph.Type_filter.extract_type_for_lang ~lang_id:"python" resp)
+
+let test_extract_type_go_gopls () =
+  let resp =
+    `Assoc
+      [ "id", `Int 1
+      ; ( "result"
+        , `Assoc
+            [ ( "contents"
+              , `Assoc
+                  [ "kind", `String "markdown"
+                  ; ( "value"
+                    , `String "```go\nvar greeting string\n```"
+                    )
+                  ] )
+            ] )
+      ]
+  in
+  Alcotest.(check (option string))
+    "gopls var form -> string"
+    (Some "string")
+    (Morph.Type_filter.extract_type_for_lang ~lang_id:"go" resp)
+
+let test_canonicalize_aliases () =
+  Alcotest.(check bool) "str ~ string" true
+    (Morph.Type_filter.type_matches ~expected:"str" ~actual:"string");
+  Alcotest.(check bool) "&str ~ string" true
+    (Morph.Type_filter.type_matches ~expected:"&str" ~actual:"string");
+  Alcotest.(check bool) "int ~ integer" true
+    (Morph.Type_filter.type_matches ~expected:"int" ~actual:"integer");
+  Alcotest.(check bool) "i32 ~ number" true
+    (Morph.Type_filter.type_matches ~expected:"i32" ~actual:"number");
+  Alcotest.(check bool) "string vs number" false
+    (Morph.Type_filter.type_matches ~expected:"string" ~actual:"number")
+
 let () =
   Alcotest.run "morph"
     [ ( "pattern"
@@ -396,6 +451,12 @@ let () =
             test_type_filter_apply_accepts
         ; Alcotest.test_case "reject mismatched type" `Quick
             test_type_filter_apply_rejects
+        ; Alcotest.test_case "extract pylsp class signature" `Quick
+            test_extract_type_python_pylsp
+        ; Alcotest.test_case "extract gopls var form" `Quick
+            test_extract_type_go_gopls
+        ; Alcotest.test_case "canonicalize aliases" `Quick
+            test_canonicalize_aliases
         ] )
     ; ( "mcp"
       , [ Alcotest.test_case "initialize" `Quick test_mcp_initialize

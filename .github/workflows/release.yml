@@ -17,11 +17,20 @@ jobs:
         include:
           - os: macos-14
             target: darwin-arm64
+            optional: false
+          - os: macos-13
+            target: darwin-amd64
+            optional: true
           - os: ubuntu-24.04
             target: linux-amd64
+            optional: false
           - os: ubuntu-24.04-arm
             target: linux-arm64
+            optional: false
     runs-on: ${{ matrix.os }}
+    # macos-13 (Intel) free runners have unreliable capacity; mark optional
+    # so the rest of the matrix can publish a release without it.
+    continue-on-error: ${{ matrix.optional }}
     env:
       TARGET: ${{ matrix.target }}
     steps:

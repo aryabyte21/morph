@@ -112,7 +112,7 @@
 (library
  (name morph)
  (public_name morph)
- (libraries base eio eio_main yojson logs fmt unix incremental domainslib)
+ (libraries base eio eio_main yojson logs fmt unix incremental domainslib str)
  (foreign_archives
   ts_runtime
   ts_lang_typescript

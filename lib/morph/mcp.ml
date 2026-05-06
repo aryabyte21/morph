@@ -4,7 +4,7 @@ let protocol_version = "2024-11-05"
 
 let server_info =
   `Assoc
-    [ "name", `String "morph"; "version", `String "0.1.0" ]
+    [ "name", `String "morph"; "version", `String "0.1.1" ]
 
 let initialize_result =
   `Assoc
