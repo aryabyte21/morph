@@ -2,6 +2,8 @@
 # tree-sitter-cli from grammar.js. They contain hundreds of thousands of
 # lines of generated state-machine code that should not count toward
 # language statistics or contributor lines-of-code.
+lib/runtime/src/**       linguist-vendored=true
+lib/runtime/include/**   linguist-vendored=true
 lib/grammars/*/parser.c       linguist-generated=true
 lib/grammars/*/scanner.c      linguist-generated=true
 lib/grammars/*/tree_sitter/*  linguist-generated=true
