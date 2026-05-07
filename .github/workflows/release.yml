@@ -62,17 +62,30 @@ jobs:
     needs: build
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+      sha_darwin_arm64: ${{ steps.extract.outputs.sha_darwin_arm64 }}
+      sha_linux_amd64: ${{ steps.extract.outputs.sha_linux_amd64 }}
+      sha_linux_arm64: ${{ steps.extract.outputs.sha_linux_arm64 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
-      - name: Compute checksums
+      - name: Compute checksums and outputs
+        id: extract
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
           cd artifacts
           shasum -a 256 *.tar.gz > checksums.txt
           cat checksums.txt
+          version=${REF_NAME#v}
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "sha_darwin_arm64=$(awk '/morph-darwin-arm64/ {print $1}' checksums.txt)" >> "$GITHUB_OUTPUT"
+          echo "sha_linux_amd64=$(awk '/morph-linux-amd64/ {print $1}' checksums.txt)"   >> "$GITHUB_OUTPUT"
+          echo "sha_linux_arm64=$(awk '/morph-linux-arm64/ {print $1}' checksums.txt)"   >> "$GITHUB_OUTPUT"
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
@@ -80,3 +93,81 @@ jobs:
             artifacts/*.tar.gz
             artifacts/checksums.txt
           generate_release_notes: true
+
+  update-tap:
+    # Pushes the new version's Formula/morph.rb to aryabyte21/homebrew-morph.
+    # Requires the HOMEBREW_TAP_TOKEN secret (a PAT with `contents:write` on
+    # that tap repo). If the secret is missing the job no-ops gracefully.
+    needs: release
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    env:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      VERSION: ${{ needs.release.outputs.version }}
+      SHA_DARWIN_ARM64: ${{ needs.release.outputs.sha_darwin_arm64 }}
+      SHA_LINUX_AMD64: ${{ needs.release.outputs.sha_linux_amd64 }}
+      SHA_LINUX_ARM64: ${{ needs.release.outputs.sha_linux_arm64 }}
+    steps:
+      - name: Skip if no tap token
+        id: gate
+        run: |
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "no HOMEBREW_TAP_TOKEN secret; skipping tap update" >&2
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Checkout tap
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/aryabyte21/homebrew-morph.git" tap
+          cd tap
+          git config user.name "morph-release-bot"
+          git config user.email "morph-release-bot@users.noreply.github.com"
+          mkdir -p Formula
+      - name: Render formula
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          cat > tap/Formula/morph.rb <<EOF
+          class Morph < Formula
+            desc "Type-aware codemod CLI for AI agents and humans"
+            homepage "https://github.com/aryabyte21/morph"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/aryabyte21/morph/releases/download/v#{version}/morph-darwin-arm64.tar.gz"
+                sha256 "${SHA_DARWIN_ARM64}"
+              else
+                odie "morph: no prebuilt darwin-amd64 binary; install from source via opam"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/aryabyte21/morph/releases/download/v#{version}/morph-linux-arm64.tar.gz"
+                sha256 "${SHA_LINUX_ARM64}"
+              else
+                url "https://github.com/aryabyte21/morph/releases/download/v#{version}/morph-linux-amd64.tar.gz"
+                sha256 "${SHA_LINUX_AMD64}"
+              end
+            end
+
+            def install
+              bin.install "morph"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/morph --version")
+            end
+          end
+          EOF
+      - name: Commit and push
+        if: steps.gate.outputs.skip == 'false'
+        run: |
+          cd tap
+          git add Formula/morph.rb
+          git diff --cached --quiet && exit 0
+          git commit -m "morph ${VERSION}"
+          git push origin main

@@ -1,4 +1,5 @@
 module Cli = Cli
+module Ignore = Ignore
 module Lang = Lang
 module Lsp = Lsp
 module Mcp = Mcp

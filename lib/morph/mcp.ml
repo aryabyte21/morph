@@ -4,7 +4,7 @@ let protocol_version = "2024-11-05"
 
 let server_info =
   `Assoc
-    [ "name", `String "morph"; "version", `String "0.1.2" ]
+    [ "name", `String "morph"; "version", `String "0.2.0" ]
 
 let initialize_result =
   `Assoc
@@ -112,7 +112,7 @@ let resolve_lang lang_arg paths =
 
 let tool_find ~lang ~pattern ~paths =
   let p = Pattern.parse ~lang ~source:pattern ~where:None in
-  let matches = Match_engine.scan ~pattern:p ~paths in
+  let matches = Match_engine.scan ~pattern:p ~paths () in
   let header =
     Printf.sprintf "Found %d match(es) [%s]"
       (List.length matches)
@@ -139,7 +139,7 @@ let bindings_text (m : Match_engine.match_) =
 
 let tool_preview_rewrite ~lang ~pattern ~rewrite ~paths =
   let p = Pattern.parse ~lang ~source:pattern ~where:None in
-  let matches = Match_engine.scan ~pattern:p ~paths in
+  let matches = Match_engine.scan ~pattern:p ~paths () in
   let lines =
     List.map
       (fun (m : Match_engine.match_) ->
@@ -160,7 +160,7 @@ let tool_preview_rewrite ~lang ~pattern ~rewrite ~paths =
 
 let tool_apply_rewrite ~lang ~pattern ~rewrite ~paths =
   let p = Pattern.parse ~lang ~source:pattern ~where:None in
-  let matches = Match_engine.scan ~pattern:p ~paths in
+  let matches = Match_engine.scan ~pattern:p ~paths () in
   let by_file = group_by_file matches in
   let summary =
     List.map

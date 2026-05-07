@@ -85,7 +85,7 @@ let poll_once entries =
     entries;
   !changed
 
-let watch ~pattern ~paths ~poll_seconds =
+let watch ~pattern ~paths ~poll_seconds ~excludes ~respect_gitignore =
   let parser = Lang.parser_new pattern.Pattern.lang in
   let p_src_str = pattern.Pattern.canonical in
   let p_src = Ts.Source_string p_src_str in
@@ -94,7 +94,18 @@ let watch ~pattern ~paths ~poll_seconds =
     Matcher.pattern_anchor ~lang:pattern.Pattern.lang
       (Ts.root_node p_tree)
   in
-  let files = Match_engine.collect_files ~lang:pattern.Pattern.lang paths in
+  let ignore_rules =
+    let base =
+      if respect_gitignore
+      then Match_engine.load_repo_ignore_rules paths
+      else Ignore.empty
+    in
+    Ignore.with_excludes base excludes
+  in
+  let files =
+    Match_engine.collect_files ~ignore_rules
+      ~lang:pattern.Pattern.lang paths
+  in
   let entries = Hashtbl.create 16 in
   List.iter
     (fun f ->

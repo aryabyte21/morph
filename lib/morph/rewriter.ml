@@ -8,7 +8,22 @@ let scan_metavars (s : string) : (int * int * string) list =
   let acc = ref [] in
   let i = ref 0 in
   while !i < n - 1 do
-    if s.[!i] = '$' && is_id_start s.[!i + 1]
+    (* Try $$$NAME first so we don't accidentally consume it as $NAME. *)
+    if !i + 3 < n
+       && s.[!i] = '$'
+       && s.[!i + 1] = '$'
+       && s.[!i + 2] = '$'
+       && is_id_start s.[!i + 3]
+    then begin
+      let start = !i in
+      let j = ref (!i + 3) in
+      while !j < n && is_id_cont s.[!j] do
+        incr j
+      done;
+      acc := (start, !j, String.sub s start (!j - start)) :: !acc;
+      i := !j
+    end
+    else if s.[!i] = '$' && is_id_start s.[!i + 1]
     then begin
       let start = !i in
       let j = ref (!i + 1) in

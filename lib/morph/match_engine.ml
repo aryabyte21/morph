@@ -119,25 +119,63 @@ let scan_file ~file ~p_anchor ~(p_src : Ts.src) ~parser : match_ list =
   if profile then add_ns t_walk (now_ns () - t2);
   List.rev !results
 
-let collect_files ~lang paths =
+let collect_files ?(ignore_rules = Ignore.empty) ~lang paths =
   let exts = Lang.extensions lang in
   let has_ext path =
     List.exists (fun e -> Filename.check_suffix path e) exts
   in
-  let rec go acc path =
-    match Sys.is_directory path with
-    | true ->
-      let entries = Sys.readdir path in
-      Array.fold_left
-        (fun acc name ->
-          if String.length name > 0 && name.[0] = '.'
-          then acc
-          else go acc (Filename.concat path name))
-        acc entries
-    | false -> if has_ext path then path :: acc else acc
-    | exception Sys_error _ -> acc
+  let rec go ~base acc path =
+    let rel =
+      if path = base
+      then ""
+      else if String.length path > String.length base + 1
+              && String.sub path 0 (String.length base + 1) = base ^ "/"
+      then String.sub path (String.length base + 1)
+             (String.length path - String.length base - 1)
+      else path
+    in
+    let name = Filename.basename path in
+    if name <> "" && Ignore.should_skip ignore_rules ~name ~rel
+    then acc
+    else
+      match Sys.is_directory path with
+      | true ->
+        let entries = Sys.readdir path in
+        Array.fold_left
+          (fun acc child ->
+            (* skip dotfiles by default but allow listed files *)
+            if String.length child > 0 && child.[0] = '.'
+               && child <> "." && child <> ".."
+            then acc
+            else go ~base acc (Filename.concat path child))
+          acc entries
+      | false -> if has_ext path then path :: acc else acc
+      | exception Sys_error _ -> acc
   in
-  List.fold_left go [] paths
+  List.fold_left
+    (fun acc p ->
+      let base = if p = "." then Sys.getcwd () else p in
+      go ~base acc p)
+    [] paths
+
+let load_repo_ignore_rules paths =
+  let candidates =
+    List.fold_left
+      (fun acc p ->
+        let dir =
+          try
+            if Sys.is_directory p then p else Filename.dirname p
+          with _ -> p
+        in
+        Filename.concat dir ".gitignore" :: acc)
+      [] paths
+  in
+  List.fold_left
+    (fun acc f ->
+      if Sys.file_exists f
+      then Ignore.merge acc (Ignore.load_gitignore f)
+      else acc)
+    Ignore.empty candidates
 
 let parallelism =
   match Sys.getenv_opt "MORPH_JOBS" with
@@ -155,11 +193,18 @@ let make_pattern_state lang p_src =
   in
   parser, p_tree, p_anchor
 
-let scan ~pattern ~paths : match_ list =
+let scan ?(excludes = []) ?(respect_gitignore = true) ~pattern ~paths
+    () : match_ list =
   let lang = pattern.Pattern.lang in
   let p_src_str = pattern.Pattern.canonical in
   let p_src = Ts.Source_string p_src_str in
-  let files = collect_files ~lang paths in
+  let ignore_rules =
+    let base =
+      if respect_gitignore then load_repo_ignore_rules paths else Ignore.empty
+    in
+    Ignore.with_excludes base excludes
+  in
+  let files = collect_files ~ignore_rules ~lang paths in
   let files_arr = Array.of_list files in
   let n = Array.length files_arr in
   if n = 0

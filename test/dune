@@ -5,4 +5,5 @@
   (glob_files fixtures/*.ts)
   (glob_files fixtures/*.py)
   (glob_files fixtures/*.go)
-  (glob_files fixtures/*.rs)))
+  (glob_files fixtures/*.rs)
+  %{exe:../bin/main.exe}))

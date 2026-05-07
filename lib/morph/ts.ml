@@ -92,6 +92,24 @@ let src_node_text node = function
   | Source_string s -> node_text node s
   | Source_bigstring b -> node_text_bs node b
 
+let src_byte_range src ~start ~end_ =
+  match src with
+  | Source_string s ->
+    if end_ <= String.length s && start <= end_
+    then String.sub s start (end_ - start)
+    else ""
+  | Source_bigstring b ->
+    let len = Bigarray.Array1.dim b in
+    if end_ <= len && start <= end_
+    then begin
+      let buf = Bytes.create (end_ - start) in
+      for i = 0 to end_ - start - 1 do
+        Bytes.set buf i (Bigarray.Array1.get b (start + i))
+      done;
+      Bytes.unsafe_to_string buf
+    end
+    else ""
+
 let iter_named_children node ~f =
   let n = node_named_child_count node in
   for i = 0 to n - 1 do

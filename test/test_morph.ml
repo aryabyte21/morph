@@ -59,7 +59,7 @@ let test_match_engine_metavar_single_arg () =
       ~where:None
   in
   let matches =
-    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ]
+    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ] ()
   in
   Alcotest.(check int) "exactly one 1-arg console.log" 1
     (List.length matches);
@@ -80,7 +80,7 @@ let test_match_engine_no_match () =
     Morph.Pattern.parse ~lang:ts ~source:"alert($X)" ~where:None
   in
   let matches =
-    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ]
+    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ] ()
   in
   Alcotest.(check int) "no alert calls" 0 (List.length matches)
 
@@ -90,7 +90,7 @@ let test_match_engine_python () =
     Morph.Pattern.parse ~lang:py ~source:"print($X)" ~where:None
   in
   let matches =
-    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ]
+    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ] ()
   in
   Alcotest.(check int) "two single-arg print calls" 2
     (List.length matches)
@@ -101,10 +101,75 @@ let test_match_engine_go () =
     Morph.Pattern.parse ~lang:go ~source:"fmt.Println($X)" ~where:None
   in
   let matches =
-    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ]
+    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ] ()
   in
   Alcotest.(check int) "two single-arg fmt.Println calls" 2
     (List.length matches)
+
+let test_ellipsis_zero_args () =
+  let pat =
+    Morph.Pattern.parse ~lang:ts ~source:"log($$$ARGS)" ~where:None
+  in
+  let parser = Morph.Lang.parser_new ts in
+  let h = "log()" in
+  let h_tree = Morph.Ts.parse_string parser h in
+  let h_root = Morph.Ts.root_node h_tree in
+  let p_tree = Morph.Ts.parse_string parser pat.canonical in
+  let p_anchor =
+    Morph.Matcher.pattern_anchor ~lang:ts (Morph.Ts.root_node p_tree)
+  in
+  let count = ref 0 in
+  Morph.Ts.walk h_root ~f:(fun h_node ->
+    match
+      Morph.Matcher.match_node
+        ~p_src:(Morph.Ts.Source_string pat.canonical)
+        ~h_src:(Morph.Ts.Source_string h)
+        ~p_node:p_anchor ~h_node ~acc:[]
+    with
+    | Some _ -> incr count
+    | None -> ());
+  Alcotest.(check bool) "log() matches log($$$ARGS)" true (!count >= 1)
+
+let test_ellipsis_three_args () =
+  let pat =
+    Morph.Pattern.parse ~lang:ts ~source:"log($$$ARGS)" ~where:None
+  in
+  let parser = Morph.Lang.parser_new ts in
+  let h = "log(a, b, c)" in
+  let h_tree = Morph.Ts.parse_string parser h in
+  let h_root = Morph.Ts.root_node h_tree in
+  let p_tree = Morph.Ts.parse_string parser pat.canonical in
+  let p_anchor =
+    Morph.Matcher.pattern_anchor ~lang:ts (Morph.Ts.root_node p_tree)
+  in
+  let count = ref 0 in
+  Morph.Ts.walk h_root ~f:(fun h_node ->
+    match
+      Morph.Matcher.match_node
+        ~p_src:(Morph.Ts.Source_string pat.canonical)
+        ~h_src:(Morph.Ts.Source_string h)
+        ~p_node:p_anchor ~h_node ~acc:[]
+    with
+    | Some _ -> incr count
+    | None -> ());
+  Alcotest.(check bool) "log(a,b,c) matches log($$$ARGS)" true
+    (!count >= 1)
+
+let test_ignore_default_skips_node_modules () =
+  let rules = Morph.Ignore.empty in
+  Alcotest.(check bool) "node_modules" true
+    (Morph.Ignore.should_skip rules ~name:"node_modules" ~rel:"node_modules");
+  Alcotest.(check bool) ".git" true
+    (Morph.Ignore.should_skip rules ~name:".git" ~rel:".git");
+  Alcotest.(check bool) "src" false
+    (Morph.Ignore.should_skip rules ~name:"src" ~rel:"src")
+
+let test_ignore_with_excludes () =
+  let rules = Morph.Ignore.with_excludes Morph.Ignore.empty [ "*.gen.ts" ] in
+  Alcotest.(check bool) "matches glob" true
+    (Morph.Ignore.should_skip rules ~name:"foo.gen.ts" ~rel:"src/foo.gen.ts");
+  Alcotest.(check bool) "ignores non-matching" false
+    (Morph.Ignore.should_skip rules ~name:"foo.ts" ~rel:"src/foo.ts")
 
 let test_match_engine_rust () =
   let fixture = "fixtures/sample.rs" in
@@ -112,7 +177,7 @@ let test_match_engine_rust () =
     Morph.Pattern.parse ~lang:rust ~source:"println!($X)" ~where:None
   in
   let matches =
-    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ]
+    Morph.Match_engine.scan ~pattern:pat ~paths:[ fixture ] ()
   in
   Alcotest.(check int) "one single-token-tree println!" 1
     (List.length matches)
@@ -402,6 +467,67 @@ let test_canonicalize_aliases () =
   Alcotest.(check bool) "string vs number" false
     (Morph.Type_filter.type_matches ~expected:"string" ~actual:"number")
 
+(* End-to-end MCP integration: spawn the morph binary and pipe a real
+   JSON-RPC handshake + tool call through stdin/stdout. *)
+let test_mcp_e2e_via_binary () =
+  let bin =
+    let candidates =
+      [ "../bin/main.exe"
+      ; "../../bin/main.exe"
+      ; "../../../bin/main.exe"
+      ; "../../../../bin/main.exe"
+      ; "_build/default/bin/main.exe"
+      ]
+    in
+    match List.find_opt Sys.file_exists candidates with
+    | Some p -> p
+    | None -> Alcotest.skip ()
+  in
+  begin
+    let in_read, in_write = Unix.pipe () in
+    let out_read, out_write = Unix.pipe () in
+    let dev_null = Unix.openfile "/dev/null" [ Unix.O_WRONLY ] 0o644 in
+    let pid =
+      Unix.create_process bin [| bin; "mcp" |] in_read out_write
+        dev_null
+    in
+    Unix.close in_read;
+    Unix.close out_write;
+    Unix.close dev_null;
+    let oc = Unix.out_channel_of_descr in_write in
+    let ic = Unix.in_channel_of_descr out_read in
+    let send j =
+      output_string oc (Yojson.Basic.to_string j);
+      output_char oc '\n';
+      flush oc
+    in
+    send
+      (`Assoc
+        [ "jsonrpc", `String "2.0"
+        ; "id", `Int 1
+        ; "method", `String "initialize"
+        ; "params", `Assoc []
+        ]);
+    let line = input_line ic in
+    let resp = Yojson.Basic.from_string line in
+    let proto =
+      match resp with
+      | `Assoc kvs ->
+        (match List.assoc_opt "result" kvs with
+         | Some (`Assoc rkvs) ->
+           (match List.assoc_opt "protocolVersion" rkvs with
+            | Some (`String s) -> s
+            | _ -> "")
+         | _ -> "")
+      | _ -> ""
+    in
+    close_out oc;
+    close_in ic;
+    (try Unix.kill pid Sys.sigterm with _ -> ());
+    (try ignore (Unix.waitpid [ Unix.WNOHANG ] pid) with _ -> ());
+    Alcotest.(check string) "stdio handshake protocol" "2024-11-05" proto
+  end
+
 let () =
   Alcotest.run "morph"
     [ ( "pattern"
@@ -433,6 +559,16 @@ let () =
     ; ( "matcher"
       , [ Alcotest.test_case "metavar consistency" `Quick
             test_matcher_metavar_consistency
+        ; Alcotest.test_case "ellipsis matches zero args" `Quick
+            test_ellipsis_zero_args
+        ; Alcotest.test_case "ellipsis matches three args" `Quick
+            test_ellipsis_three_args
+        ] )
+    ; ( "ignore"
+      , [ Alcotest.test_case "default skips node_modules" `Quick
+            test_ignore_default_skips_node_modules
+        ; Alcotest.test_case "exclude globs" `Quick
+            test_ignore_with_excludes
         ] )
     ; ( "rewriter"
       , [ Alcotest.test_case "substitute" `Quick
@@ -467,5 +603,7 @@ let () =
             test_mcp_tools_call_find_ts
         ; Alcotest.test_case "tools/call find (Python)" `Quick
             test_mcp_tools_call_find_py
+        ; Alcotest.test_case "stdio handshake via real binary" `Quick
+            test_mcp_e2e_via_binary
         ] )
     ]
