@@ -1,13 +1,13 @@
 class Morph < Formula
   desc "Type-aware codemod CLI for AI agents and humans"
   homepage "https://github.com/aryabyte21/morph"
-  version "0.1.2"
+  version "0.2.0"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/aryabyte21/morph/releases/download/v#{version}/morph-darwin-arm64.tar.gz"
-      sha256 "c05686eee740b3786d08e1904a9149fe9d414faeb92feaa7d4a0b9470ddbdc92"
+      sha256 "36dcca6d19a8876b5398b1f10b1b0e9098dabede317fb34e59f5bae28a04f72d"
     else
       odie "morph: no prebuilt darwin-amd64 binary; install from source via opam"
     end
@@ -16,10 +16,10 @@ class Morph < Formula
   on_linux do
     if Hardware::CPU.arm?
       url "https://github.com/aryabyte21/morph/releases/download/v#{version}/morph-linux-arm64.tar.gz"
-      sha256 "877f4fac02fe640177c25993a3e27fb45d278b0b2806c13aec247bcbb35ac641"
+      sha256 "f6c7e74cf5d6c60b16a1ed89ad8992628474c0067a58a8d76d58cd0b84218d22"
     else
       url "https://github.com/aryabyte21/morph/releases/download/v#{version}/morph-linux-amd64.tar.gz"
-      sha256 "d5a63fa1851f8238b55cbcefeaf3a5e16fb38fa1bcdc195cad723f4dca126f90"
+      sha256 "cce9d1e503601a6a3830d28a68be569579185d916cda403f27ef0eefa53748f1"
     end
   end
 
