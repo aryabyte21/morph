@@ -1,6 +1,6 @@
 open Cmdliner
 
-let version = "0.1.1"
+let version = "0.1.2"
 
 let rewrite_cmd =
   let pattern =
