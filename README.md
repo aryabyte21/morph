@@ -3,7 +3,7 @@
 **Type-aware codemod CLI for AI agents and humans.** Single binary. MCP-native.
 
 <p align="center">
-  <img src="docs/demo.png" alt="morph rewriting console.log to logger.info, with type-aware filtering" width="820"/>
+  <img src="docs/demo.gif" alt="morph rewriting console.log to logger.info, with type-aware filtering" width="820"/>
 </p>
 
 ```sh
