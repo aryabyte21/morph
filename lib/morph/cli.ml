@@ -1,3 +1,24 @@
+let color_enabled =
+  lazy
+    (match Sys.getenv_opt "NO_COLOR" with
+     | Some _ -> false
+     | None ->
+       (match Sys.getenv_opt "MORPH_COLOR" with
+        | Some "always" -> true
+        | Some "never" -> false
+        | _ -> (try Unix.isatty Unix.stdout with _ -> false)))
+
+let c code s =
+  if Lazy.force color_enabled
+  then Printf.sprintf "\027[%sm%s\027[0m" code s
+  else s
+
+let red s = c "31" s
+let green s = c "32" s
+let cyan s = c "36" s
+let dim s = c "2" s
+let bold s = c "1" s
+
 let group_by_file (matches : Match_engine.match_ list) =
   let tbl = Hashtbl.create 16 in
   List.iter
@@ -17,23 +38,29 @@ let bindings_to_pairs (m : Match_engine.match_) =
 let print_match_only matches =
   List.iter
     (fun (m : Match_engine.match_) ->
-      Printf.printf "  %s:%d:%d  %s\n" m.loc.file m.loc.line m.loc.col
+      Printf.printf "  %s  %s\n"
+        (bold
+           (Printf.sprintf "%s:%d:%d" m.loc.file m.loc.line m.loc.col))
         m.text;
       List.iter
         (fun (k, (v : Match_engine.binding_loc)) ->
-          Printf.printf "      %s = %s\n" k v.text)
+          Printf.printf "      %s = %s\n" (dim k) v.text)
         m.bindings)
     matches
 
 let print_diff_for_file ~file ~template ~ms =
-  Printf.printf "\n--- %s\n+++ %s (proposed)\n" file file;
+  Printf.printf "\n%s\n%s\n"
+    (red (Printf.sprintf "--- %s" file))
+    (green (Printf.sprintf "+++ %s (proposed)" file));
   List.iter
     (fun (m : Match_engine.match_) ->
       let new_text =
         Rewriter.substitute ~template ~bindings:(bindings_to_pairs m)
       in
-      Printf.printf "  @@ line %d @@\n  - %s\n  + %s\n" m.loc.line
-        m.text new_text)
+      Printf.printf "  %s\n  %s\n  %s\n"
+        (cyan (Printf.sprintf "@@ line %d @@" m.loc.line))
+        (red (Printf.sprintf "- %s" m.text))
+        (green (Printf.sprintf "+ %s" new_text)))
     ms
 
 let apply_rewrites_to_file ~file ~template ~ms =
