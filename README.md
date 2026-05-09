@@ -1,24 +1,27 @@
 # morph
 
-Type-aware codemod CLI for AI agents and humans. Single binary. MCP-native.
+**Type-aware codemod CLI for AI agents and humans.** Single binary. MCP-native.
+
+<p align="center">
+  <img src="docs/demo.svg" alt="morph rewriting console.log to logger.info, with type-aware filtering" width="820"/>
+</p>
 
 ```sh
 brew tap aryabyte21/morph
 brew install morph
 
-morph rewrite -p 'console.log($X)' -r 'logger.info($X)' --apply src/
+morph rewrite -p 'console.log($$$ARGS)' -r 'logger.info($$$ARGS)' src/
 ```
 
-## What it does
+## Why morph
 
-Pattern-matches and rewrites code by AST shape, with optional type filtering via the language's own LSP.
+Three things you can't do well with grep, IDE rename, ast-grep, or Semgrep alone:
 
-- 5 languages: TypeScript, TSX, Python, Go, Rust
-- Metavariables (`$X`, `$Y`) and ellipsis (`$$$ARGS`) match across argument lists
-- `--where '$X: string'` filters by real type information from `tsserver`, `pylsp`, `gopls`, or `rust-analyzer`
-- Built-in MCP server for Cursor, Claude Code, and Codex
-- Watch mode with sub-millisecond incremental re-runs after edits
-- `.gitignore` aware; respects a built-in skip list (`node_modules`, `target`, `dist`, etc.)
+- **Refactor by AST shape, not regex.** A literal `"console.log(x)"` inside a string or comment will never get touched. Match `console.log($$$ARGS)`, get every real call, no false positives.
+- **Filter by real types.** `--where '$X: string'` borrows the language's own LSP (`tsserver`, `pylsp`, `gopls`, `rust-analyzer`) so you can rewrite only the `string`-typed calls and leave the numeric ones alone. ast-grep can't express this; Semgrep needs a separate type-aware mode per language.
+- **Plug into AI agents over MCP.** `morph mcp` runs as an MCP server over stdio. Cursor, Claude Code, and Codex call `find` / `preview_rewrite` / `apply_rewrite` as structured tools. No shell-piping diffs through prompts, no token-burning context juggling.
+
+Plus: 5 languages (TypeScript, TSX, Python, Go, Rust), metavariables (`$X`) and ellipsis (`$$$ARGS`), `.gitignore`-aware, watch mode with sub-millisecond incremental re-runs, JSON output for scripting, single static binary.
 
 ## Install
 
@@ -36,42 +39,50 @@ opam pin add morph https://github.com/aryabyte21/morph.git
 
 ## Examples
 
-Find and rewrite, dry run by default:
+Find and rewrite. Dry run by default; pass `--apply` to write to disk:
 
 ```sh
-morph rewrite -p 'console.log($X)' -r 'logger.info($X)' src/
-morph rewrite -p 'console.log($X)' -r 'logger.info($X)' --apply src/
+morph rewrite -p 'console.log($$$ARGS)' -r 'logger.info($$$ARGS)' src/
+morph rewrite -p 'console.log($$$ARGS)' -r 'logger.info($$$ARGS)' --apply src/
 ```
 
-Match any number of arguments with ellipsis:
+`$X` matches a single AST node (one argument, one identifier). Use `$$$ARGS` to match any number of children; that's almost always what you want for argument lists:
 
 ```sh
 morph rewrite -p 'fmt.Println($$$ARGS)' -r 'log.Info($$$ARGS)' --apply .
 ```
 
-Filter by type (only string-typed arguments):
+Filter by type. Only rewrite the `string`-typed calls:
 
 ```sh
 morph rewrite -p 'log($X)' -w '$X: string' --apply src/
 morph rewrite -p 'log($X)' -w '$X: int'    --apply src/
 ```
 
-Watch mode: edit a file, re-runs in sub-millisecond:
+Watch mode. Edit a file, re-runs in sub-millisecond:
 
 ```sh
-morph watch -p 'console.log($X)' src/
+morph watch -p 'console.log($$$ARGS)' src/
 ```
 
 JSON output for scripting:
 
 ```sh
-morph rewrite -p 'console.log($X)' --json src/ | jq .
+morph rewrite -p 'console.log($$$ARGS)' --json src/ | jq .
 ```
 
 Per-tool exclude:
 
 ```sh
-morph rewrite -p 'console.log($X)' --exclude '*.generated.ts' src/
+morph rewrite -p 'console.log($$$ARGS)' --exclude '*.generated.ts' src/
+```
+
+Try the bundled demo:
+
+```sh
+cd examples/demo
+morph rewrite -p 'console.log($$$ARGS)' -r 'logger.info($$$ARGS)' app.ts
+morph rewrite -p 'console.log($X)' -w '$X: number' app.ts
 ```
 
 ## MCP integration (Cursor, Claude Code, Codex)
@@ -82,7 +93,7 @@ morph rewrite -p 'console.log($X)' --exclude '*.generated.ts' src/
 # Codex:         append examples/mcp/codex.toml to ~/.codex/config.toml
 ```
 
-Three tools are exposed: `find`, `preview_rewrite`, `apply_rewrite`. Each accepts `pattern`, `paths`, optional `lang` (auto-detected from file extension if omitted), and for the rewrite tools a `rewrite` template.
+Three tools are exposed: `find`, `preview_rewrite`, `apply_rewrite`. Each accepts `pattern`, `paths`, optional `lang` (auto-detected from file extension if omitted), and for the rewrite tools a `rewrite` template. Transport is JSON-RPC over stdio.
 
 ## Pattern syntax
 
@@ -108,7 +119,7 @@ Type names are canonicalized cross-language: `str ~ string`, `int ~ integer`, `i
 
 ## Performance
 
-On cal.com (7,424 TS files):
+On cal.com (7,424 TS files), morph v0.2.0, May 2026:
 
 | tool | cold scan | RSS |
 |---|---|---|
@@ -116,9 +127,18 @@ On cal.com (7,424 TS files):
 | ast-grep | 0.2s | 22 MB |
 | Semgrep | 4.4s | 297 MB |
 
-Watch mode after a single-file edit: 0.11–0.35 ms.
+Watch mode after a single-file edit: 0.11&ndash;0.35 ms.
 
 ast-grep is faster on cold scans. morph's edge is type-aware filtering, MCP, and the watch-mode incremental story; ast-grep can't express `$X: string` queries at all.
+
+## Output and color
+
+Diff and match output is colorized when stdout is a TTY. Override with:
+
+```sh
+NO_COLOR=1 morph rewrite ...        # disable
+MORPH_COLOR=always morph rewrite ...  # force on (e.g. when piping to less -R)
+```
 
 ## How it works
 

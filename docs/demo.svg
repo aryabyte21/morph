@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 660" font-family="ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace" font-size="14">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dy="4" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="920" height="660" fill="#0b0c14"/>
+
+  <g filter="url(#shadow)">
+    <rect x="20" y="20" width="880" height="620" rx="10" ry="10" fill="#1a1b26"/>
+    <rect x="20" y="20" width="880" height="36" rx="10" ry="10" fill="#16161e"/>
+    <rect x="20" y="44" width="880" height="12" fill="#16161e"/>
+
+    <circle cx="42" cy="38" r="6" fill="#ff5f57"/>
+    <circle cx="62" cy="38" r="6" fill="#febc2e"/>
+    <circle cx="82" cy="38" r="6" fill="#28c840"/>
+    <text x="460" y="42" fill="#7a7f96" text-anchor="middle">morph &#8212; examples/demo</text>
+
+    <g fill="#c0caf5">
+      <text x="40" y="86"><tspan fill="#7aa2f7">~/morph/examples/demo</tspan> <tspan fill="#9ece6a">$</tspan> morph rewrite -p <tspan fill="#e0af68">'console.log($$$ARGS)'</tspan> -r <tspan fill="#e0af68">'logger.info($$$ARGS)'</tspan> app.ts</text>
+
+      <text x="40" y="116" fill="#a9b1d6">morph (typescript): scanned 1 path(s), found <tspan fill="#9ece6a" font-weight="bold">4</tspan> match(es)</text>
+
+      <text x="40" y="146" fill="#f7768e">--- app.ts</text>
+      <text x="40" y="166" fill="#9ece6a">+++ app.ts (proposed)</text>
+
+      <text x="56" y="190" fill="#7dcfff">@@ line 4 @@</text>
+      <text x="56" y="210" fill="#f7768e">- console.log(<tspan fill="#e0af68">"creating user"</tspan>, name)</text>
+      <text x="56" y="230" fill="#9ece6a">+ logger.info(<tspan fill="#e0af68">"creating user"</tspan>, name)</text>
+
+      <text x="56" y="254" fill="#7dcfff">@@ line 7 @@</text>
+      <text x="56" y="274" fill="#f7768e">- console.log(<tspan fill="#e0af68">"inserted"</tspan>, id)</text>
+      <text x="56" y="294" fill="#9ece6a">+ logger.info(<tspan fill="#e0af68">"inserted"</tspan>, id)</text>
+
+      <text x="56" y="318" fill="#7dcfff">@@ line 12 @@</text>
+      <text x="56" y="338" fill="#f7768e">- console.log(<tspan fill="#e0af68">"deleting"</tspan>, id)</text>
+      <text x="56" y="358" fill="#9ece6a">+ logger.info(<tspan fill="#e0af68">"deleting"</tspan>, id)</text>
+
+      <text x="56" y="382" fill="#7dcfff">@@ line 17 @@</text>
+      <text x="56" y="402" fill="#f7768e">- console.log(x)</text>
+      <text x="56" y="422" fill="#9ece6a">+ logger.info(x)</text>
+
+      <text x="40" y="466"><tspan fill="#7aa2f7">~/morph/examples/demo</tspan> <tspan fill="#9ece6a">$</tspan> morph rewrite -p <tspan fill="#e0af68">'console.log($X)'</tspan> -w <tspan fill="#e0af68">'$X: number'</tspan> app.ts</text>
+
+      <text x="40" y="496" fill="#a9b1d6">morph (typescript): scanned 1 path(s), found <tspan fill="#9ece6a" font-weight="bold">1</tspan> match(es)</text>
+
+      <text x="56" y="526"><tspan fill="#c0caf5" font-weight="bold">app.ts:17:3</tspan>  console.log(x)</text>
+      <text x="104" y="546"><tspan fill="#545c7e">$X</tspan> = x</text>
+
+      <text x="40" y="592" fill="#545c7e">// only the number-typed call matched. tsserver did the type check.</text>
+    </g>
+  </g>
+</svg>
